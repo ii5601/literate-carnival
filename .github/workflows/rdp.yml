@@ -57,6 +57,32 @@ jobs:
               exit 1
           }
 
+      - name: "Регистрация скрипта RDP-Assist из папки .rdp"
+        run: |
+          $TargetFolder = "C:\Scripts"
+          if (-not (Test-Path $TargetFolder)) { New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null }
+
+          $SourceFolder = "${{ github.workspace }}/.rdp"
+          
+          if (Test-Path "$SourceFolder\rdp-assist.ps1") {
+              # Копируем скрипт и конфиг в рабочую папку
+              Copy-Item -Path "$SourceFolder\*" -Destination $TargetFolder -Recurse -Force
+            
+              # Прописываем в автозагрузку реестра запуск .ps1
+              $AutostartCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -File `"$TargetFolder\rdp-assist.ps1`""
+              Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RdpUserSetup" -Value $AutostartCommand -Force
+              Write-Host "Succes: Found .exe assistent version." -ForegroundColor Green
+            
+          } elseif (Test-Path "$SourceFolder\rdp-assist.exe") {
+              # Если скомпилирован в EXE
+              Copy-Item -Path "$SourceFolder\*" -Destination $TargetFolder -Recurse -Force
+            
+              # Прописываем в автозагрузку реестра запуск .exe
+              $AutostartCommand = "`"$TargetFolder\rdp-assist.exe`""
+              Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RdpUserSetup" -Value $AutostartCommand -Force
+              Write-Host "Succes: Found .exe assistent version" -ForegroundColor Greeт
+          }
+
       - name: Install Tailscale
         run: |
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.102.3-amd64.msi"
