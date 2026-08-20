@@ -57,12 +57,12 @@ jobs:
               exit 1
           }
 
-      - name: "Регистрация скрипта RDP-Assist из папки .rdp"
+      - name: "Set RDP-Assist to auto run"
         run: |
           $TargetFolder = "C:\Scripts"
           if (-not (Test-Path $TargetFolder)) { New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null }
 
-          $SourceFolder = "${{ github.workspace }}/.rdp"
+          $SourceFolder = "${{ github.workspace }}/rdp"
           
           if (Test-Path "$SourceFolder\rdp-assist.ps1") {
               # Копируем скрипт и конфиг в рабочую папку
