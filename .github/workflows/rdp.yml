@@ -26,10 +26,6 @@ jobs:
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
-          Install-Language ru-RU
-          Set-Culture ru-RU
-          Set-WinUserLanguageList -LanguageList (New-WinUserLanguageList -Language "ru-RU") -Force
-
           # (Optional) Restart the Remote Desktop service to ensure changes take effect
           Restart-Service -Name TermService -Force
 
