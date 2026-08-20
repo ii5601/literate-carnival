@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-      - name: Configure Core RDP Settings
+      - name: Configure Core Settings
         run: |
           # Enable Remote Desktop and disable Network Level Authentication (if needed)
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
@@ -25,6 +25,10 @@ jobs:
           # For testing, allow any incoming connection on port 3389
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
+
+          Set-Culture ru-RU
+          Set-UiCulture ru-RU
+          Set-WinUserLanguageList -LanguageList (New-WinUserLanguageList -Language "ru-RU") -Force
 
           # (Optional) Restart the Remote Desktop service to ensure changes take effect
           Restart-Service -Name TermService -Force
@@ -55,32 +59,6 @@ jobs:
           if (-not (Get-LocalUser -Name "RDP")) {
               Write-Error "User creation failed"
               exit 1
-          }
-
-      - name: "Set RDP-Assist to auto run"
-        run: |
-          $TargetFolder = "C:\Scripts"
-          if (-not (Test-Path $TargetFolder)) { New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null }
-
-          $SourceFolder = "${{ github.workspace }}/rdp"
-          
-          if (Test-Path "$SourceFolder\rdp-assist.ps1") {
-              # Копируем скрипт и конфиг в рабочую папку
-              Copy-Item -Path "$SourceFolder\*" -Destination $TargetFolder -Recurse -Force
-            
-              # Прописываем в автозагрузку реестра запуск .ps1
-              $AutostartCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -File `"$TargetFolder\rdp-assist.ps1`""
-              Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RdpUserSetup" -Value $AutostartCommand -Force
-              Write-Host "Succes: Found .exe assistent version." -ForegroundColor Green
-            
-          } elseif (Test-Path "$SourceFolder\rdp-assist.exe") {
-              # Если скомпилирован в EXE
-              Copy-Item -Path "$SourceFolder\*" -Destination $TargetFolder -Recurse -Force
-            
-              # Прописываем в автозагрузку реестра запуск .exe
-              $AutostartCommand = "`"$TargetFolder\rdp-assist.exe`""
-              Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "RdpUserSetup" -Value $AutostartCommand -Force
-              Write-Host "Succes: Found .exe assistent version" -ForegroundColor Greeт
           }
 
       - name: Install Tailscale
