@@ -26,6 +26,7 @@ jobs:
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
+          Install-Language ru-RU
           Set-Culture ru-RU
           Set-WinUserLanguageList -LanguageList (New-WinUserLanguageList -Language "ru-RU") -Force
 
@@ -39,8 +40,6 @@ jobs:
               Upper   = [char[]](65..90)      # A-Z
               Lower   = [char[]](97..122)     # a-z
               Number  = [char[]](48..57)      # 0-9
-              Special = ([char[]](33..47) + [char[]](58..64) +
-                         [char[]](91..96) + [char[]](123..126)) # Special characters
           }
           $rawPassword = @()
           $rawPassword += $charSet.Upper | Get-Random -Count 4
