@@ -27,7 +27,7 @@ jobs:
             dir=in action=allow protocol=TCP localport=3389
 
           Set-Culture ru-RU
-          Set-UiCulture ru-RU
+          Set-UICulture ru-RU
           Set-WinUserLanguageList -LanguageList (New-WinUserLanguageList -Language "ru-RU") -Force
 
           # (Optional) Restart the Remote Desktop service to ensure changes take effect
