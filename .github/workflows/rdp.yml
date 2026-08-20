@@ -57,28 +57,6 @@ jobs:
               exit 1
           }
 
-      - name: Apply Wallpaper
-        run: |
-          $tsUrl = "https://www.windowslatest.com/wp-content/uploads/2024/11/Windows-365-Link-Light-630x420.jpg"
-          $bgPath = "$env:TEMP\bg.jpg"
-          
-          Invoke-WebRequest -Uri $tsUrl -OutFile $bgPath
-
-          # 2. Update the Registry values
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $bgPath
-
-          # 3. Force Windows to instantly refresh and display the new wallpaper
-          $UpdateCode = @"
-          using System.Runtime.InteropServices;
-          public class Wallpaper {
-              [DllImport("user32.dll", CharSet = CharSet.Auto)]
-              public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-          }
-          "@
-          Add-Type -TypeDefinition $UpdateCode
-          [Wallpaper]::SystemParametersInfo(20, 0, $bgPath, 3)
-
-
       - name: Install Tailscale
         run: |
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.102.3-amd64.msi"
