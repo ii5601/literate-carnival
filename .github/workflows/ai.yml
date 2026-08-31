@@ -20,6 +20,13 @@ jobs:
           echo "Installing Ollama"
           curl -fsSL https://ollama.com/install.sh | sh
 
+          echo "Installing Docker if not present"
+          if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
+              sudo usermod -aG docker $USER
+          fi
+
       - name: Establish Tailscale Connection and Run Web UI
         run: |
           # Bring up Tailscale with the provided auth key
@@ -30,6 +37,7 @@ jobs:
           retries=0
           while [ -z "$tsIP" ] && [ $retries -lt 10 ]; do
               tsIP=$(tailscale ip -4)
+              echo "Attempt $retries: Tailscale IP = $tsIP"
               sleep 5
               retries=$((retries+1))
           done
@@ -39,23 +47,89 @@ jobs:
               exit 1
           fi
           echo "TAILSCALE_IP=$tsIP" >> $GITHUB_ENV
+          echo "Tailscale IP: $tsIP"
 
-          # Run Open WebUI on port 80 (standard HTTP port)
-          docker run -d -p 80:8080 \
+          # Check if Docker is running
+          sudo systemctl status docker || sudo systemctl start docker
+
+          # Pull the image first (to see if there are any issues)
+          echo "Pulling Open WebUI image..."
+          docker pull ghcr.io/open-webui/open-webui:main
+
+          # Remove old container if exists
+          docker stop open-webui 2>/dev/null || true
+          docker rm open-webui 2>/dev/null || true
+
+          # Run Open WebUI on port 80
+          echo "Starting Open WebUI container..."
+          docker run -d \
+            -p 80:8080 \
             --add-host=host.docker.internal:host-gateway \
             -v open-webui:/app/backend/data \
             --name open-webui \
             --restart unless-stopped \
             ghcr.io/open-webui/open-webui:main
 
-          # Give container time to start
-          sleep 10
+          # Wait for container to start
+          echo "Waiting for container to start..."
+          sleep 15
 
-      - name: Verify and Display Access
+          # Check container status
+          echo "Container status:"
+          docker ps -a | grep open-webui
+
+          # Check container logs
+          echo "Container logs:"
+          docker logs open-webui --tail 50
+
+      - name: Verify Accessibility
+        run: |
+          echo "Tailscale IP: $TAILSCALE_IP"
+          
+          # Get public IP
+          publicIP=$(curl -s https://ipinfo.io/ip)
+          echo "Public IP: $publicIP"
+
+          # Check if container is running
+          if ! docker ps | grep -q open-webui; then
+              echo "❌ Container is not running!"
+              docker logs open-webui --tail 50
+              exit 1
+          fi
+
+          # Test localhost
+          echo "Testing localhost:80..."
+          sleep 5
+          curl -v http://localhost:80 2>&1 | head -20
+          
+          if [ $? -eq 0 ]; then
+              echo "✅ Localhost:80 is accessible"
+          else
+              echo "❌ Localhost:80 is not accessible"
+              echo "Checking if anything is listening on port 80..."
+              sudo netstat -tlnp | grep :80
+              echo "Container ports:"
+              docker port open-webui
+          fi
+
+          # Test Tailscale IP
+          echo "Testing Tailscale IP on port 80..."
+          timeout 10 curl -v http://$TAILSCALE_IP:80 2>&1 | head -20
+          
+          if [ $? -eq 0 ]; then
+              echo "✅ Tailscale IP:80 is accessible"
+          else
+              echo "❌ Tailscale IP:80 is not accessible"
+              echo "Checking Tailscale status..."
+              tailscale status
+          fi
+
+      - name: Display Access Information
         run: |
           publicIP=$(curl -s https://ipinfo.io/ip)
           
-          echo -e "\n=========================================="
+          echo ""
+          echo "=========================================="
           echo "✅ Open WebUI is running!"
           echo "=========================================="
           echo "📌 Access URLs:"
@@ -63,25 +137,36 @@ jobs:
           echo "🔹 Via Tailscale (recommended):"
           echo "   http://$TAILSCALE_IP"
           echo ""
-          echo "🔹 Via Public IP (might not work):"
+          echo "🔹 Via Public IP (may not work):"
           echo "   http://$publicIP"
           echo ""
           echo "⚠️  Note: GitHub Actions runners may not expose public ports"
           echo "🔒 Use Tailscale IP for reliable access"
           echo "=========================================="
-          
-          # Test local access
-          echo "Testing local access..."
-          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:80
+          echo ""
+          echo "Container status:"
+          docker ps | grep open-webui
+          echo ""
+          echo "Container logs (last 10 lines):"
+          docker logs open-webui --tail 10
 
       - name: Maintain Connection
         run: |
-          publicIP=$(curl -s https://ipinfo.io/ip)
+          echo "Starting maintenance loop..."
           
           while true; do
+              # Check if container is still running
+              if ! docker ps | grep -q open-webui; then
+                  echo "[$(date)] ❌ Container stopped! Restarting..."
+                  docker start open-webui
+                  sleep 10
+              fi
+              
               echo "[$(date)] ✅ Open WebUI is active"
               echo "   🌐 http://$TAILSCALE_IP"
-              echo "   🌐 http://$publicIP (may not work)"
+              echo "   Container status:"
+              docker ps | grep open-webui
               echo ""
+              
               sleep 300
           done
