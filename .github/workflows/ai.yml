@@ -42,7 +42,6 @@ jobs:
           }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
 
-          & "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
           docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
       
       - name: Verify Accessibility
