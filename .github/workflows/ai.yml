@@ -22,7 +22,7 @@ jobs:
 
       - name: Establish Tailscale Connection and Run Web UI
         run: |
-          # Bring up Tailscale with the provided auth key and set a unique hostname
+          # Bring up Tailscale with the provided auth key
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-runner
 
           # Wait for Tailscale to assign an IP
@@ -40,37 +40,48 @@ jobs:
           fi
           echo "TAILSCALE_IP=$tsIP" >> $GITHUB_ENV
 
-          # Run Open WebUI in Docker
-          docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart unless-stopped ghcr.io/open-webui/open-webui:main
+          # Run Open WebUI on port 80 (standard HTTP port)
+          docker run -d -p 80:8080 \
+            --add-host=host.docker.internal:host-gateway \
+            -v open-webui:/app/backend/data \
+            --name open-webui \
+            --restart unless-stopped \
+            ghcr.io/open-webui/open-webui:main
 
-      - name: Verify Accessibility
+          # Give container time to start
+          sleep 10
+
+      - name: Verify and Display Access
         run: |
-          echo "Tailscale IP: $TAILSCALE_IP"
-
-          # Test connectivity using nc (netcat) against the Tailscale IP on port 3000
-          timeout 5 nc -zv 127.0.0.1 3000
-          if [ $? -ne 0 ]; then
-              echo "Connection to port 3000 failed"
-              docker logs open-webui --tail 20
-              echo "Maybe 8080?"
-              timeout 5 nc -zv 127.0.0.1 8080
-              if [ $? -ne 0 ]; then
-                echo "No, step failed"
-                exit 1
-              fi
-          fi
-          echo "Connectivity successful!"
+          publicIP=$(curl -s https://ipinfo.io/ip)
+          
+          echo -e "\n=========================================="
+          echo "✅ Open WebUI is running!"
+          echo "=========================================="
+          echo "📌 Access URLs:"
+          echo ""
+          echo "🔹 Via Tailscale (recommended):"
+          echo "   http://$TAILSCALE_IP"
+          echo ""
+          echo "🔹 Via Public IP (might not work):"
+          echo "   http://$publicIP"
+          echo ""
+          echo "⚠️  Note: GitHub Actions runners may not expose public ports"
+          echo "🔒 Use Tailscale IP for reliable access"
+          echo "=========================================="
+          
+          # Test local access
+          echo "Testing local access..."
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:80
 
       - name: Maintain Connection
         run: |
           publicIP=$(curl -s https://ipinfo.io/ip)
-          echo -e "\n===== ACCESS ====="
-          echo "Tailscale IP: $TAILSCALE_IP"
-          echo "Public IP: $publicIP"
-          echo -e "==================\n"
-
-          # Keep runner active indefinitely (or until manually cancelled)
+          
           while true; do
-              echo "[$(date)] AI Active - Use Ctrl+C in workflow to terminate"
+              echo "[$(date)] ✅ Open WebUI is active"
+              echo "   🌐 http://$TAILSCALE_IP"
+              echo "   🌐 http://$publicIP (may not work)"
+              echo ""
               sleep 300
           done
