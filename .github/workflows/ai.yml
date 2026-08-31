@@ -5,68 +5,71 @@ on:
 
 jobs:
   ai:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 3600
 
     steps:
       - name: Install Programs
         run: |
-          Write-Host "Installing Tailscale"
-          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.102.3-amd64.msi"
-          $installerPath = "$env:TEMP\tailscale.msi"
-          
-          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
-          Remove-Item $installerPath -Force
-          
-          Write-Host "Installing Ollama"
-          irm https://ollama.com/install.ps1 | iex
+          echo "Installing Tailscale"
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+          sudo apt-get update
+          sudo apt-get install -y tailscale
+
+          echo "Installing Ollama"
+          curl -fsSL https://ollama.com/install.sh | sh
+
+          echo "Installing Docker"
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          sudo sh get-docker.sh
+          sudo usermod -aG docker $USER
 
       - name: Establish Tailscale Connection and Run Web UI
         run: |
           # Bring up Tailscale with the provided auth key and set a unique hostname
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-ruunner
-          
-          # Wait for Tailscale to assign an IP
-          $tsIP = $null
-          $retries = 0
-          while (-not $tsIP -and $retries -lt 10) {
-              $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
-              Start-Sleep -Seconds 5
-              $retries++
-          }
-          
-          if (-not $tsIP) {
-              Write-Error "Tailscale IP not assigned. Exiting."
-              exit 1
-          }
-          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-runner
 
-          & "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
-          docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-      
+          # Wait for Tailscale to assign an IP
+          tsIP=""
+          retries=0
+          while [ -z "$tsIP" ] && [ $retries -lt 10 ]; do
+              tsIP=$(tailscale ip -4)
+              sleep 5
+              retries=$((retries+1))
+          done
+
+          if [ -z "$tsIP" ]; then
+              echo "Tailscale IP not assigned. Exiting."
+              exit 1
+          fi
+          echo "TAILSCALE_IP=$tsIP" >> $GITHUB_ENV
+
+          # Run Open WebUI in Docker
+          docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart unless-stopped ghcr.io/open-webui/open-webui:main
+
       - name: Verify Accessibility
         run: |
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          
-          # Test connectivity using Test-NetConnection against the Tailscale IP on port 8080
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 8080
-          if (-not $testResult.TcpTestSucceeded) {
-              Write-Error "Connection to port 8080 failed"
+          echo "Tailscale IP: $TAILSCALE_IP"
+
+          # Test connectivity using nc (netcat) against the Tailscale IP on port 8080
+          timeout 5 nc -zv $TAILSCALE_IP 8080
+          if [ $? -ne 0 ]; then
+              echo "Connection to port 8080 failed"
               exit 1
-          }
-          Write-Host "Connectivity successful!"
+          fi
+          echo "Connectivity successful!"
 
       - name: Maintain Connection
         run: |
-          $publicIP = (Invoke-WebRequest -UseBasicParsing https://ipinfo.io/ip).Content
-          Write-Host "`n===== ACCESS ====="
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          Write-Host "Public IP: $publicIP"
-          Write-Host "==================`n"
-          
+          publicIP=$(curl -s https://ipinfo.io/ip)
+          echo -e "\n===== ACCESS ====="
+          echo "Tailscale IP: $TAILSCALE_IP"
+          echo "Public IP: $publicIP"
+          echo -e "==================\n"
+
           # Keep runner active indefinitely (or until manually cancelled)
-          while ($true) {
-              Write-Host "[$(Get-Date)] AI Active - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 300
-          }
+          while true; do
+              echo "[$(date)] AI Active - Use Ctrl+C in workflow to terminate"
+              sleep 300
+          done
