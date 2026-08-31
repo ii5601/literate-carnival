@@ -51,7 +51,13 @@ jobs:
           timeout 5 nc -zv 127.0.0.1 3000
           if [ $? -ne 0 ]; then
               echo "Connection to port 3000 failed"
-              exit 1
+              docker logs open-webui --tail 20
+              echo "Maybe 8080?"
+              timeout 5 nc -zv 127.0.0.1 8080
+              if [ $? -ne 0 ]; then
+                echo "No, step failed"
+                exit 1
+              fi
           fi
           echo "Connectivity successful!"
 
