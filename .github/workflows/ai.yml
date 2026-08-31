@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  secure-rdp:
+  ai:
     runs-on: windows-latest
     timeout-minutes: 3600
 
@@ -42,6 +42,7 @@ jobs:
           }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
 
+          & "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
           docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
       
       - name: Verify Accessibility
