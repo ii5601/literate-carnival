@@ -1,0 +1,36 @@
+name: Ollama Remote Server
+
+on:
+  workflow_dispatch: # Запуск вручную из интерфейса GitHub
+
+jobs:
+  run-ollama:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.com | sh
+
+      - name: Start Ollama and Pull Model
+        run: |
+          # Разрешаем внешние подключения к Ollama внутри контейнера
+          export OLLAMA_HOST="0.0.0.0:11434"
+          ollama serve &
+          
+          sleep 5
+          ollama pull qwen2.5-coder:7b
+
+      - name: Setup SSH Tunnel (Keep Alive)
+        run: |
+          # Устанавливаем tmate для создания удаленного доступа
+          sudo apt-get update && sudo apt-get install -y tmate
+          tmate -S /tmp/tmate.sock new-session -d
+          tmate -S /tmp/tmate.sock wait tmate
+          
+          # Выводим в лог строку подключения для вашего терминала
+          echo "=== СКОПИРУЙТЕ СТРОКУ НИЖЕ ДЛЯ ПОДКЛЮЧЕНИЯ ==="
+          tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
+          echo "=============================================="
+          
+          # Держим воркфлоу активным 2 часа (или пока вы его не отмените)
+          sleep 7200
