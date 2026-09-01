@@ -20,17 +20,13 @@ jobs:
           sleep 5
           ollama pull qwen2.5-coder:7b
 
-      - name: Setup SSH Tunnel (Keep Alive)
-        run: |
-          # Устанавливаем tmate для создания удаленного доступа
-          sudo apt-get update && sudo apt-get install -y tmate
-          tmate -S /tmp/tmate.sock new-session -d
-          tmate -S /tmp/tmate.sock wait tmate
-          
-          # Выводим в лог строку подключения для вашего терминала
-          echo "=== СКОПИРУЙТЕ СТРОКУ НИЖЕ ДЛЯ ПОДКЛЮЧЕНИЯ ==="
-          tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
-          echo "=============================================="
+      - name: Setup SSH Tunnel (Улучшенный)
+        uses: mxschmitt/action-tmate@v3
+        with:
+          # Этот экшен сам установит tmate, выведет SSH-ссылку ярким цветом 
+          # и остановит воркфлоу для ожидания вашего подключения
+          limit-access-to-actor: false
+
           
           # Держим воркфлоу активным 2 часа (или пока вы его не отмените)
           sleep 7200
