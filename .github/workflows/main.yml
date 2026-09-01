@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Install Ollama
         run: |
-          curl -fsSL https://ollama.com | sh
+          curl -fsSL https://ollama.com/install.sh | sh
 
       - name: Start Ollama and Pull Model
         run: |
