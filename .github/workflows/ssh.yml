@@ -1,0 +1,13 @@
+name: SSH (Ubuntu)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3600
+
+    steps:
+      - name: Setup tmate session for debugging
+        uses: mxschmitt/action-tmate@v3
