@@ -10,4 +10,4 @@ jobs:
 
     steps:
       - name: Setup tmate session for debugging
-        uses: mxschmitt/action-tmate@v3
+        run: echo
