@@ -20,8 +20,13 @@ jobs:
          curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh -o 3x-ui.sh
          sudo bash 3x-ui.sh
 
-      - name: Setup Tailscale
+      - name: Setup SSH and Tailscale
         run: |
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKeJEdOMcnrLADPqCMzkum9kPV5TdGMU1aoTh9tCyWau ii5601@DESKTOP-SBGOBQ4" > ~/.ssh/authorized_keys
+
           # Bring up Tailscale with the provided auth key
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-runner
 
