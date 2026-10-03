@@ -1,14 +1,15 @@
-name: SSH (Ubuntu)
+name: VPN
 
 on:
   workflow_dispatch:
 
 jobs:
-  ai:
+  vpn:
     runs-on: ubuntu-latest
     timeout-minutes: 3600
 
     steps:
       - name: Setup VPN
         run: |
+         sudo -i
          bash <(curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh)
