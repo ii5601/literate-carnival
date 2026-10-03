@@ -28,6 +28,10 @@ jobs:
           echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKeJEdOMcnrLADPqCMzkum9kPV5TdGMU1aoTh9tCyWau ii5601@DESKTOP-SBGOBQ4" > ~/.ssh/authorized_keys
           chmod 600 ~/.ssh/authorized_keys
 
+          curl -fsSL https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/shellinabox/shellinabox_2.10-1_amd64.deb -o shellinabox.deb
+          sudo apt install ./shellinabox.deb
+          rm shellinabox.deb
+
           # Bring up Tailscale with the provided auth key
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-runner
 
