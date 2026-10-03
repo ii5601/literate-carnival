@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Setup VPN
         run: |
-         sudo su -c <(curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh)
+         sudo bash <(curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh)
