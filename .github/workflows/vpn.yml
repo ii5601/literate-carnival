@@ -11,13 +11,39 @@ jobs:
     steps:
       - name: Setup VPN
         run: |
+         echo "Installing Tailscale"
+         curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+         curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+         sudo apt-get update
+         sudo apt-get install -y tailscale
+         
          curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh -o 3x-ui.sh
          sudo bash 3x-ui.sh
-      
+
+      - name: Setup Tailscale
+        run: |
+          # Bring up Tailscale with the provided auth key
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ai-gh-runner
+
+          # Wait for Tailscale to assign an IP
+          tsIP=""
+          retries=0
+          while [ -z "$tsIP" ] && [ $retries -lt 10 ]; do
+              tsIP=$(tailscale ip -4)
+              echo "Attempt $retries: Tailscale IP = $tsIP"
+              sleep 5
+              retries=$((retries+1))
+          done
+
+          if [ -z "$tsIP" ]; then
+              echo "Tailscale IP not assigned. Exiting."
+              exit 1
+          fi
+          echo "TAILSCALE_IP=$tsIP" >> $GITHUB_ENV
+          echo "Tailscale IP: $tsIP"
+          
       - name: Maintain Connection
         run: |
-          echo "Starting maintenance loop..."
-          
           while true; do
               echo "VPN working, connecting link on top"
               
