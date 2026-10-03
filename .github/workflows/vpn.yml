@@ -13,3 +13,13 @@ jobs:
         run: |
          curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh -o 3x-ui.sh
          sudo bash 3x-ui.sh
+      
+      - name: Maintain Connection
+        run: |
+          echo "Starting maintenance loop..."
+          
+          while true; do
+              echo "VPN working, connecting link on top"
+              
+              sleep 300
+          done
