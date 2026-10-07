@@ -22,7 +22,7 @@ jobs:
 
       - name: Setup SSH and Tailscale
         run: |
-          sudo useradd -m -s /bin/bash ii5601 && echo "ii5601:261212Az261212Az" | sudo chpasswd && (sudo usermod -aG sudo ii5601 || sudo usermod -aG wheel ii5601)
+          sudo useradd -m -s /bin/bash ii5601 && echo "ii5601:1" | sudo chpasswd && (sudo usermod -aG sudo ii5601 || sudo usermod -aG wheel ii5601)
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
